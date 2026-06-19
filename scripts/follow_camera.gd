@@ -19,7 +19,7 @@ func _physics_process(delta: float) -> void:
 		return
 
 	var target_basis := target.global_transform.basis.orthonormalized()
-	var target_forward := -target_basis.z.normalized()
+	var target_forward := target_basis.z.normalized()
 	var desired_position := target.global_position - target_forward * distance + Vector3.UP * height
 	var follow_weight := 1.0 - exp(-smoothing * delta)
 

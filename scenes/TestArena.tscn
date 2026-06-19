@@ -2,11 +2,28 @@
 
 [ext_resource type="PackedScene" path="res://scenes/BrickCar.tscn" id="1_brick_car"]
 [ext_resource type="Script" path="res://scripts/follow_camera.gd" id="2_follow_camera"]
-[ext_resource type="PackedScene" path="res://scenes/TruckTownMap.tscn" id="3_truck_town"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_floor"]
+albedo_color = Color(0.45, 0.45, 0.45, 1)
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_floor"]
+material = SubResource("StandardMaterial3D_floor")
+size = Vector3(100, 1, 100)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(100, 1, 100)
 
 [node name="TestArena" type="Node3D"]
 
-[node name="TruckTownMap" parent="." instance=ExtResource("3_truck_town")]
+[node name="Floor" type="StaticBody3D" parent="."]
+position = Vector3(0, -0.5, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Floor"]
+mesh = SubResource("BoxMesh_floor")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
+shape = SubResource("BoxShape3D_floor")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 rotation = Vector3(-0.872665, 0.785398, 0)
