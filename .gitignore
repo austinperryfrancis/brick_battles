@@ -1,0 +1,15 @@
+# Godot generated cache/import output.
+.godot/
+.import/
+
+# Local export credentials and generated builds.
+export.cfg
+export_presets.cfg
+export_credentials.cfg
+builds/
+exports/
+
+# OS/editor noise.
+.DS_Store
+Thumbs.db
+*.tmp

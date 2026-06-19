@@ -1,0 +1,25 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/BrickCar.tscn" id="1_brick_car"]
+[ext_resource type="Script" path="res://scripts/follow_camera.gd" id="2_follow_camera"]
+[ext_resource type="PackedScene" path="res://scenes/TruckTownMap.tscn" id="3_truck_town"]
+
+[node name="TestArena" type="Node3D"]
+
+[node name="TruckTownMap" parent="." instance=ExtResource("3_truck_town")]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+rotation = Vector3(-0.872665, 0.785398, 0)
+shadow_enabled = true
+
+[node name="BrickCar" parent="." instance=ExtResource("1_brick_car")]
+position = Vector3(0, 1.2, 0)
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.894427, 0.447214, 0, -0.447214, 0.894427, 0, 4, 8)
+current = true
+script = ExtResource("2_follow_camera")
+target_path = NodePath("../BrickCar")
+distance = 6.0
+height = 4.0
+smoothing = 8.0

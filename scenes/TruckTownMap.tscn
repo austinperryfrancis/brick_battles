@@ -1,0 +1,9 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://truck_town.glb" id="1_truck_town"]
+[ext_resource type="Script" path="res://scripts/map_collision_builder.gd" id="2_collision_builder"]
+
+[node name="TruckTownMap" type="Node3D"]
+script = ExtResource("2_collision_builder")
+
+[node name="TruckTownVisual" parent="." instance=ExtResource("1_truck_town")]
