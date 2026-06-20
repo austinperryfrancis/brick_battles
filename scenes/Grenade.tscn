@@ -1,0 +1,45 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/grenade.gd" id="1_grenade_script"]
+[ext_resource type="PackedScene" path="res://scenes/ExplosionFlash.tscn" id="2_explosion"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_grenade"]
+albedo_color = Color(0.14, 0.42, 0.16, 1)
+roughness = 0.65
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_band"]
+albedo_color = Color(0.05, 0.09, 0.05, 1)
+roughness = 0.75
+
+[sub_resource type="SphereMesh" id="SphereMesh_grenade"]
+material = SubResource("StandardMaterial3D_grenade")
+radius = 0.18
+height = 0.36
+radial_segments = 16
+rings = 8
+
+[sub_resource type="SphereMesh" id="SphereMesh_grenade_band"]
+material = SubResource("StandardMaterial3D_band")
+radius = 0.18
+height = 0.36
+radial_segments = 16
+rings = 8
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_grenade"]
+radius = 0.2
+
+[node name="Grenade" type="Area3D" groups=["grenades"]]
+monitoring = true
+monitorable = false
+script = ExtResource("1_grenade_script")
+explosion_scene = ExtResource("2_explosion")
+
+[node name="Body" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_grenade")
+
+[node name="Band" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.25, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("SphereMesh_grenade_band")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("SphereShape3D_grenade")

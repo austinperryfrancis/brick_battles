@@ -1,33 +1,77 @@
 extends VehicleBody3D
 
+signal inventory_changed(inventory: Dictionary)
+signal item_collected(item_id: String, display_name: String, count: int)
+signal item_used(item_id: String, display_name: String)
+
 # Quick tuning notes:
 # - Faster acceleration: raise engine_force_value, then raise max_speed if it hits the cap too soon.
 # - Tighter turning: raise steering_limit or steering_response; lower them if it twitches.
 # - Less flipping: lower wheel_roll_influence in BrickCar.tscn, or lower center_of_mass there.
 # - More grip: raise wheel_friction_slip on the VehicleWheel3D nodes in BrickCar.tscn.
 # - Stronger braking: raise brake_force.
+# - Faster coast-down after releasing gas: raise coast_deceleration or rolling_deceleration.
 # - Less jump launch: lower max_jump_up_speed or raise extra_air_gravity/ground_stick_force.
+# - Less body lean in turns: raise grounded_upright_strength or pitch_roll_damping.
 
-@export var engine_force_value: float = 120.0
+@export var engine_force_value: float = 250.0
 @export var reverse_force: float = 65.0
 @export var brake_force: float = 8.5
-@export var steering_limit: float = 0.42
-@export var steering_response: float = 2.8
-@export var max_speed: float = 24.0
-@export var low_speed_boost: float = 2.4
+@export var steering_limit: float = 0.38
+@export var steering_response: float = 3.0
+@export var max_speed: float = 40.0
+@export var low_speed_boost: float = 4.0
+@export var rolling_deceleration: float = 1.0
+@export var coast_deceleration: float = 3.2
 @export var ground_stick_force: float = 8.0
-@export var extra_air_gravity: float = 12.0
-@export var max_jump_up_speed: float = 4.5
-@export var air_angular_damping: float = 1.6
+@export var extra_air_gravity: float = 4.0
+@export var max_jump_up_speed: float = 7.0
+@export var air_angular_damping: float = 1.0
+@export var grounded_upright_strength: float = 3600.0
+@export var pitch_roll_damping: float = 650.0
+@export var bullet_scene: PackedScene
+@export var muzzle_path: NodePath = ^"Muzzle"
+@export var bullet_speed: float = 300.0
+@export var bullet_impact_force: float = 35.0
+@export var burst_count: int = 3
+@export var burst_interval: float = 0.09
+@export var burst_cooldown: float = 0.35
+@export var minigun_burst_count: int = 50
+@export var minigun_burst_interval: float = 0.035
+@export var minigun_bullet_speed: float = 360.0
+@export var minigun_bullet_impact_force: float = 28.0
+@export var rocket_scene: PackedScene
+@export var rocket_speed: float = 42.0
+@export var rocket_explosion_radius: float = 7.0
+@export var rocket_explosion_force: float = 190.0
+@export var grenade_scene: PackedScene
+@export var grenade_forward_speed: float = 24.0
+@export var grenade_upward_speed: float = 5.0
+@export var grenade_gravity: float = 20.0
+@export var grenade_fuse_time: float = 2.5
+@export var grenade_explosion_radius: float = 5.5
+@export var grenade_explosion_force: float = 140.0
+@export var grenade_max_bounces: int = 4
+@export var grenade_bounce_damping: float = 0.65
+@export var grenade_min_bounce_speed: float = 4.0
 
 var reset_position: Vector3
 var _wheels: Array[VehicleWheel3D] = []
+var _muzzle: Marker3D
+var _burst_shots_remaining := 0
+var _burst_timer := 0.0
+var _cooldown_timer := 0.0
+var _active_burst_interval := 0.09
+var _active_bullet_speed := 300.0
+var _active_bullet_impact_force := 35.0
+var inventory: Dictionary = {}
 
 
 func _ready() -> void:
 	reset_position = global_position
 	can_sleep = false
 	_wheels.assign(find_children("*", "VehicleWheel3D", false, false))
+	_muzzle = get_node_or_null(muzzle_path) as Marker3D
 	print("BrickCar VehicleBody scene loaded successfully.")
 
 
@@ -38,6 +82,10 @@ func _physics_process(delta: float) -> void:
 
 	_update_drive(speed, forward_speed, grounded)
 	_update_steering(delta, speed, grounded)
+	_update_weapon(delta)
+	_update_inventory_item()
+	_apply_grounded_stability(grounded)
+	_apply_ground_drag(grounded)
 
 	if grounded and speed > 0.5:
 		apply_central_force(Vector3.DOWN * ground_stick_force * speed)
@@ -92,7 +140,7 @@ func _update_steering(delta: float, speed: float, grounded: bool) -> void:
 
 	if grounded:
 		var speed_factor := clampf(speed / max_speed, 0.0, 1.0)
-		var high_speed_limit := lerpf(steering_limit, steering_limit * 0.55, speed_factor)
+		var high_speed_limit := lerpf(steering_limit, steering_limit * 0.35, speed_factor)
 		target_steering = steer_input * high_speed_limit
 
 	steering = move_toward(steering, target_steering, steering_response * delta)
@@ -104,6 +152,174 @@ func _scaled_engine_force(base_force: float, speed: float) -> float:
 	if speed < 5.0:
 		return clampf(base_force * 5.0 / speed, base_force, base_force * low_speed_boost)
 	return base_force
+
+
+func _update_weapon(delta: float) -> void:
+	_cooldown_timer = maxf(_cooldown_timer - delta, 0.0)
+
+	if Input.is_action_just_pressed("fire") and _cooldown_timer <= 0.0 and _burst_shots_remaining <= 0:
+		_start_bullet_burst(burst_count, burst_interval, bullet_speed, bullet_impact_force)
+		_cooldown_timer = burst_cooldown
+
+	if _burst_shots_remaining <= 0:
+		return
+
+	_burst_timer -= delta
+	if _burst_timer > 0.0:
+		return
+
+	_fire_bullet()
+	_burst_shots_remaining -= 1
+	_burst_timer = _active_burst_interval
+
+
+func _fire_bullet() -> void:
+	if bullet_scene == null or _muzzle == null:
+		return
+
+	var bullet := bullet_scene.instantiate()
+	var bullet_parent := get_tree().current_scene
+	if bullet_parent == null:
+		bullet_parent = get_parent()
+	bullet_parent.add_child(bullet)
+	bullet.global_transform = _muzzle.global_transform
+
+	var forward := global_transform.basis.z.normalized()
+	bullet.speed = _active_bullet_speed
+	bullet.impact_force = _active_bullet_impact_force
+	if bullet.has_method("launch"):
+		bullet.launch(forward, linear_velocity)
+
+
+func _start_bullet_burst(count: int, interval: float, speed: float, impact_force: float) -> bool:
+	if bullet_scene == null or _muzzle == null or _burst_shots_remaining > 0:
+		return false
+
+	_burst_shots_remaining = maxi(count, 1)
+	_burst_timer = 0.0
+	_active_burst_interval = maxf(interval, 0.01)
+	_active_bullet_speed = speed
+	_active_bullet_impact_force = impact_force
+	return true
+
+
+func _update_inventory_item() -> void:
+	if Input.is_action_just_pressed("use_item"):
+		use_inventory_item()
+
+
+func use_inventory_item() -> bool:
+	if inventory.is_empty():
+		return false
+
+	var item_id := str(inventory.keys()[0])
+	var display_name := str(inventory[item_id].get("display_name", item_id.capitalize()))
+
+	match item_id:
+		"minigun":
+			if not _start_bullet_burst(
+				minigun_burst_count,
+				minigun_burst_interval,
+				minigun_bullet_speed,
+				minigun_bullet_impact_force
+			):
+				return false
+		"rocket":
+			_fire_rocket()
+		"grenade_launcher":
+			_fire_grenade()
+		_:
+			return false
+
+	var item_data := inventory[item_id] as Dictionary
+	var remaining_count := int(item_data.get("count", 1)) - 1
+	if remaining_count > 0:
+		item_data["count"] = remaining_count
+		inventory[item_id] = item_data
+	else:
+		inventory.clear()
+
+	item_used.emit(item_id, display_name)
+	inventory_changed.emit(inventory.duplicate())
+	return true
+
+
+func _fire_rocket() -> void:
+	if rocket_scene == null or _muzzle == null:
+		return
+
+	var rocket := rocket_scene.instantiate()
+	var rocket_parent := get_tree().current_scene
+	if rocket_parent == null:
+		rocket_parent = get_parent()
+	rocket_parent.add_child(rocket)
+	rocket.global_transform = _muzzle.global_transform
+
+	var forward := global_transform.basis.z.normalized()
+	rocket.speed = rocket_speed
+	rocket.explosion_radius = rocket_explosion_radius
+	rocket.explosion_force = rocket_explosion_force
+	if rocket.has_method("launch"):
+		rocket.launch(forward, linear_velocity)
+
+
+func _fire_grenade() -> void:
+	if grenade_scene == null or _muzzle == null:
+		return
+
+	var grenade := grenade_scene.instantiate()
+	var grenade_parent := get_tree().current_scene
+	if grenade_parent == null:
+		grenade_parent = get_parent()
+	grenade_parent.add_child(grenade)
+	grenade.global_transform = _muzzle.global_transform
+
+	var forward := global_transform.basis.z.normalized()
+	grenade.forward_speed = grenade_forward_speed
+	grenade.upward_speed = grenade_upward_speed
+	grenade.arc_gravity = grenade_gravity
+	grenade.fuse_time = grenade_fuse_time
+	grenade.explosion_radius = grenade_explosion_radius
+	grenade.explosion_force = grenade_explosion_force
+	grenade.max_bounces = grenade_max_bounces
+	grenade.bounce_damping = grenade_bounce_damping
+	grenade.min_bounce_speed = grenade_min_bounce_speed
+	if grenade.has_method("launch"):
+		grenade.launch(forward, linear_velocity)
+
+
+func _apply_grounded_stability(grounded: bool) -> void:
+	if not grounded:
+		return
+
+	var grounded_ratio := clampf(float(_get_grounded_wheel_count()) / 4.0, 0.25, 1.0)
+	var up := global_transform.basis.y.normalized()
+	var tilt_axis := up.cross(Vector3.UP)
+
+	if tilt_axis.length_squared() > 0.0001:
+		apply_torque(tilt_axis * grounded_upright_strength * grounded_ratio)
+
+	var yaw_velocity := Vector3.UP * angular_velocity.dot(Vector3.UP)
+	var pitch_roll_velocity := angular_velocity - yaw_velocity
+	apply_torque(-pitch_roll_velocity * pitch_roll_damping * grounded_ratio)
+
+
+func _apply_ground_drag(grounded: bool) -> void:
+	if not grounded:
+		return
+
+	var horizontal_velocity := Vector3(linear_velocity.x, 0.0, linear_velocity.z)
+	var horizontal_speed := horizontal_velocity.length()
+	if horizontal_speed < 0.1:
+		return
+
+	var throttle := Input.get_action_strength("accelerate")
+	var brake_input := Input.get_action_strength("brake")
+	var deceleration := rolling_deceleration
+	if throttle < 0.05 and brake_input < 0.05:
+		deceleration += coast_deceleration
+
+	apply_central_force(-horizontal_velocity.normalized() * deceleration * mass)
 
 
 func _get_grounded_wheel_count() -> int:
@@ -121,3 +337,28 @@ func reset_car(state: PhysicsDirectBodyState3D) -> void:
 	engine_force = 0.0
 	brake = 0.0
 	steering = 0.0
+
+
+func add_inventory_item(item_id: String, display_name: String = "", item_count: int = 1) -> bool:
+	if not inventory.is_empty():
+		return false
+
+	if display_name.is_empty():
+		display_name = item_id.capitalize()
+
+	var clamped_count := maxi(item_count, 1)
+	inventory[item_id] = {
+		"display_name": display_name,
+		"count": clamped_count,
+	}
+
+	item_collected.emit(item_id, display_name, clamped_count)
+	inventory_changed.emit(inventory.duplicate())
+	return true
+
+
+func get_inventory_count(item_id: String) -> int:
+	if not inventory.has(item_id):
+		return 0
+
+	return int(inventory[item_id].get("count", 0))

@@ -1,7 +1,11 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/BrickCar.tscn" id="1_brick_car"]
 [ext_resource type="Script" path="res://scripts/follow_camera.gd" id="2_follow_camera"]
+[ext_resource type="PackedScene" path="res://scenes/Barrel.tscn" id="3_barrel"]
+[ext_resource type="PackedScene" path="res://scenes/ItemPickup.tscn" id="4_item_pickup"]
+[ext_resource type="Script" path="res://scripts/inventory_hud.gd" id="5_inventory_hud"]
+[ext_resource type="PackedScene" path="res://scenes/DummyCar.tscn" id="6_dummy_car"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_floor"]
 albedo_color = Color(0.45, 0.45, 0.45, 1)
@@ -14,6 +18,20 @@ size = Vector3(100, 1, 100)
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(100, 1, 100)
 
+[sub_resource type="BoxMesh" id="BoxMesh_ramp"]
+material = SubResource("StandardMaterial3D_floor")
+size = Vector3(7, 0.5, 12)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ramp"]
+size = Vector3(7, 0.5, 12)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall"]
+material = SubResource("StandardMaterial3D_floor")
+size = Vector3(100, 3, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall"]
+size = Vector3(100, 3, 1)
+
 [node name="TestArena" type="Node3D"]
 
 [node name="Floor" type="StaticBody3D" parent="."]
@@ -24,6 +42,128 @@ mesh = SubResource("BoxMesh_floor")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
 shape = SubResource("BoxShape3D_floor")
+
+[node name="Ramp" type="StaticBody3D" parent="."]
+position = Vector3(0, 1.06, 14)
+rotation = Vector3(-0.22, 0, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Ramp"]
+mesh = SubResource("BoxMesh_ramp")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ramp"]
+shape = SubResource("BoxShape3D_ramp")
+
+[node name="Walls" type="Node3D" parent="."]
+
+[node name="NorthWall" type="StaticBody3D" parent="Walls"]
+position = Vector3(0, 1, 50)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Walls/NorthWall"]
+mesh = SubResource("BoxMesh_wall")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Walls/NorthWall"]
+shape = SubResource("BoxShape3D_wall")
+
+[node name="SouthWall" type="StaticBody3D" parent="Walls"]
+position = Vector3(0, 1, -50)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Walls/SouthWall"]
+mesh = SubResource("BoxMesh_wall")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Walls/SouthWall"]
+shape = SubResource("BoxShape3D_wall")
+
+[node name="EastWall" type="StaticBody3D" parent="Walls"]
+position = Vector3(50, 1, 0)
+rotation = Vector3(0, 1.5708, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Walls/EastWall"]
+mesh = SubResource("BoxMesh_wall")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Walls/EastWall"]
+shape = SubResource("BoxShape3D_wall")
+
+[node name="WestWall" type="StaticBody3D" parent="Walls"]
+position = Vector3(-50, 1, 0)
+rotation = Vector3(0, 1.5708, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Walls/WestWall"]
+mesh = SubResource("BoxMesh_wall")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Walls/WestWall"]
+shape = SubResource("BoxShape3D_wall")
+
+[node name="Barrels" type="Node3D" parent="."]
+
+[node name="Barrel1" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(0, 0.6, 7)
+
+[node name="Barrel2" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(-2, 0.6, 9)
+
+[node name="Barrel3" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(2, 0.6, 10.5)
+
+[node name="Barrel4" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(-4, 0.6, 20)
+
+[node name="Barrel5" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(4, 0.6, 22)
+
+[node name="DummyTargets" type="Node3D" parent="."]
+
+[node name="DummyCar" parent="DummyTargets" instance=ExtResource("6_dummy_car")]
+position = Vector3(-10, 1.2, 28)
+rotation = Vector3(0, 0.55, 0)
+
+[node name="Pickups" type="Node3D" parent="."]
+
+[node name="RocketPickup1" parent="Pickups" instance=ExtResource("4_item_pickup")]
+position = Vector3(-4, 1.2, 5)
+
+[node name="RocketPickup2" parent="Pickups" instance=ExtResource("4_item_pickup")]
+position = Vector3(4, 1.2, 12)
+
+[node name="RocketPickup3" parent="Pickups" instance=ExtResource("4_item_pickup")]
+position = Vector3(0, 1.2, 24)
+
+[node name="GrenadeLauncherPickup1" parent="Pickups" instance=ExtResource("4_item_pickup")]
+position = Vector3(-8, 1.2, 14)
+item_id = "grenade_launcher"
+display_name = "Grenade Launcher"
+item_count = 3
+visual_color = Color(0.1, 0.95, 0.32, 1)
+emission_color = Color(0.0, 0.8, 0.18, 1)
+
+[node name="GrenadeLauncherPickup2" parent="Pickups" instance=ExtResource("4_item_pickup")]
+position = Vector3(8, 1.2, 18)
+item_id = "grenade_launcher"
+display_name = "Grenade Launcher"
+item_count = 3
+visual_color = Color(0.1, 0.95, 0.32, 1)
+emission_color = Color(0.0, 0.8, 0.18, 1)
+
+[node name="GrenadeLauncherPickup3" parent="Pickups" instance=ExtResource("4_item_pickup")]
+position = Vector3(0, 1.2, 34)
+item_id = "grenade_launcher"
+display_name = "Grenade Launcher"
+item_count = 3
+visual_color = Color(0.1, 0.95, 0.32, 1)
+emission_color = Color(0.0, 0.8, 0.18, 1)
+
+[node name="MinigunPickup1" parent="Pickups" instance=ExtResource("4_item_pickup")]
+position = Vector3(-12, 1.2, 8)
+item_id = "minigun"
+display_name = "Minigun"
+visual_color = Color(1, 0.55, 0.08, 1)
+emission_color = Color(1, 0.28, 0.02, 1)
+
+[node name="MinigunPickup2" parent="Pickups" instance=ExtResource("4_item_pickup")]
+position = Vector3(12, 1.2, 28)
+item_id = "minigun"
+display_name = "Minigun"
+visual_color = Color(1, 0.55, 0.08, 1)
+emission_color = Color(1, 0.28, 0.02, 1)
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 rotation = Vector3(-0.872665, 0.785398, 0)
@@ -40,3 +180,25 @@ target_path = NodePath("../BrickCar")
 distance = 6.0
 height = 4.0
 smoothing = 8.0
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("5_inventory_hud")
+target_path = NodePath("../BrickCar")
+
+[node name="InventoryLabel" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 420.0
+offset_bottom = 56.0
+theme_override_font_sizes/font_size = 22
+text = "Inventory: Empty"
+
+[node name="PickupFlash" type="Label" parent="HUD"]
+visible = false
+offset_left = 20.0
+offset_top = 62.0
+offset_right = 420.0
+offset_bottom = 104.0
+theme_override_colors/font_color = Color(0.35, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 28
+text = "Rocket acquired"

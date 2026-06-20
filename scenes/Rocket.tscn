@@ -1,0 +1,44 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/rocket.gd" id="1_rocket_script"]
+[ext_resource type="PackedScene" path="res://scenes/ExplosionFlash.tscn" id="2_explosion"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rocket"]
+albedo_color = Color(0.9, 0.9, 0.86, 1)
+roughness = 0.35
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_nose"]
+albedo_color = Color(0.9, 0.08, 0.04, 1)
+roughness = 0.45
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_rocket_body"]
+material = SubResource("StandardMaterial3D_rocket")
+radius = 0.12
+height = 0.7
+
+[sub_resource type="SphereMesh" id="SphereMesh_rocket_nose"]
+material = SubResource("StandardMaterial3D_nose")
+radius = 0.12
+height = 0.24
+radial_segments = 12
+rings = 6
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_rocket"]
+radius = 0.18
+
+[node name="Rocket" type="Area3D" groups=["rockets"]]
+monitoring = true
+monitorable = false
+script = ExtResource("1_rocket_script")
+explosion_scene = ExtResource("2_explosion")
+
+[node name="RocketBody" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0)
+mesh = SubResource("CapsuleMesh_rocket_body")
+
+[node name="Nose" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.34)
+mesh = SubResource("SphereMesh_rocket_nose")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("SphereShape3D_rocket")

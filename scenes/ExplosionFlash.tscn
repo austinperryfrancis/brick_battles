@@ -1,0 +1,23 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/explosion_flash.gd" id="1_explosion_script"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_explosion"]
+albedo_color = Color(1, 0.42, 0.08, 0.5)
+emission_enabled = true
+emission = Color(1, 0.25, 0.02, 1)
+emission_energy_multiplier = 1.5
+transparency = 1
+
+[sub_resource type="SphereMesh" id="SphereMesh_explosion"]
+material = SubResource("StandardMaterial3D_explosion")
+radius = 0.5
+height = 1.0
+radial_segments = 24
+rings = 12
+
+[node name="ExplosionFlash" type="Node3D"]
+script = ExtResource("1_explosion_script")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_explosion")
