@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://assets/weapons/rocket_holder_flattened.dae" id="1_rocket_holder"]
+
+[node name="RocketHolderVisual" type="Node3D"]
+
+[node name="Model" parent="." instance=ExtResource("1_rocket_holder")]
+transform = Transform3D(-0.25, 0, -9.0499753e-07, 0, 0.25, 0, 9.0499753e-07, 0, -0.25, 0, 0, 0)

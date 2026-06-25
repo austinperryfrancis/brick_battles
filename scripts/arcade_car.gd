@@ -31,6 +31,8 @@ signal item_used(item_id: String, display_name: String)
 @export var pitch_roll_damping: float = 650.0
 @export var bullet_scene: PackedScene
 @export var muzzle_path: NodePath = ^"Muzzle"
+@export var weapon_mount_path: NodePath = ^"WeaponMounts/PrimaryMount"
+@export var rocket_launch_path: NodePath = ^"WeaponMounts/PrimaryMount/RocketLaunchPoint"
 @export var bullet_speed: float = 300.0
 @export var bullet_impact_force: float = 35.0
 @export var burst_count: int = 3
@@ -44,6 +46,8 @@ signal item_used(item_id: String, display_name: String)
 @export var rocket_speed: float = 42.0
 @export var rocket_explosion_radius: float = 7.0
 @export var rocket_explosion_force: float = 190.0
+@export var rocket_mount_visual_scene: PackedScene
+@export var grenade_launcher_visual_scene: PackedScene
 @export var grenade_scene: PackedScene
 @export var grenade_forward_speed: float = 24.0
 @export var grenade_upward_speed: float = 5.0
@@ -58,6 +62,9 @@ signal item_used(item_id: String, display_name: String)
 var reset_position: Vector3
 var _wheels: Array[VehicleWheel3D] = []
 var _muzzle: Marker3D
+var _weapon_mount: Marker3D
+var _rocket_launch_point: Marker3D
+var _mounted_weapon_visual: Node3D
 var _burst_shots_remaining := 0
 var _burst_timer := 0.0
 var _cooldown_timer := 0.0
@@ -72,6 +79,8 @@ func _ready() -> void:
 	can_sleep = false
 	_wheels.assign(find_children("*", "VehicleWheel3D", false, false))
 	_muzzle = get_node_or_null(muzzle_path) as Marker3D
+	_weapon_mount = get_node_or_null(weapon_mount_path) as Marker3D
+	_rocket_launch_point = get_node_or_null(rocket_launch_path) as Marker3D
 	print("BrickCar VehicleBody scene loaded successfully.")
 
 
@@ -225,9 +234,11 @@ func use_inventory_item() -> bool:
 			):
 				return false
 		"rocket":
-			_fire_rocket()
+			if not _fire_rocket():
+				return false
 		"grenade_launcher":
-			_fire_grenade()
+			if not _fire_grenade():
+				return false
 		_:
 			return false
 
@@ -239,21 +250,28 @@ func use_inventory_item() -> bool:
 	else:
 		inventory.clear()
 
+	if inventory.is_empty():
+		_clear_mounted_weapon_visual()
+
 	item_used.emit(item_id, display_name)
 	inventory_changed.emit(inventory.duplicate())
 	return true
 
 
-func _fire_rocket() -> void:
-	if rocket_scene == null or _muzzle == null:
-		return
+func _fire_rocket() -> bool:
+	var launch_point := _rocket_launch_point
+	if launch_point == null:
+		launch_point = _muzzle
+
+	if rocket_scene == null or launch_point == null:
+		return false
 
 	var rocket := rocket_scene.instantiate()
 	var rocket_parent := get_tree().current_scene
 	if rocket_parent == null:
 		rocket_parent = get_parent()
 	rocket_parent.add_child(rocket)
-	rocket.global_transform = _muzzle.global_transform
+	rocket.global_transform = launch_point.global_transform
 
 	var forward := global_transform.basis.z.normalized()
 	rocket.speed = rocket_speed
@@ -261,11 +279,12 @@ func _fire_rocket() -> void:
 	rocket.explosion_force = rocket_explosion_force
 	if rocket.has_method("launch"):
 		rocket.launch(forward, linear_velocity)
+	return true
 
 
-func _fire_grenade() -> void:
+func _fire_grenade() -> bool:
 	if grenade_scene == null or _muzzle == null:
-		return
+		return false
 
 	var grenade := grenade_scene.instantiate()
 	var grenade_parent := get_tree().current_scene
@@ -286,6 +305,7 @@ func _fire_grenade() -> void:
 	grenade.min_bounce_speed = grenade_min_bounce_speed
 	if grenade.has_method("launch"):
 		grenade.launch(forward, linear_velocity)
+	return true
 
 
 func _apply_grounded_stability(grounded: bool) -> void:
@@ -351,6 +371,7 @@ func add_inventory_item(item_id: String, display_name: String = "", item_count: 
 		"display_name": display_name,
 		"count": clamped_count,
 	}
+	_update_mounted_weapon_visual(item_id)
 
 	item_collected.emit(item_id, display_name, clamped_count)
 	inventory_changed.emit(inventory.duplicate())
@@ -362,3 +383,36 @@ func get_inventory_count(item_id: String) -> int:
 		return 0
 
 	return int(inventory[item_id].get("count", 0))
+
+
+func _update_mounted_weapon_visual(item_id: String) -> void:
+	match item_id:
+		"rocket":
+			_mount_weapon_visual(rocket_mount_visual_scene)
+		"grenade_launcher":
+			_mount_weapon_visual(grenade_launcher_visual_scene)
+		_:
+			_clear_mounted_weapon_visual()
+
+
+func _mount_weapon_visual(scene: PackedScene) -> void:
+	_clear_mounted_weapon_visual()
+
+	if scene == null or _weapon_mount == null:
+		return
+
+	var visual := scene.instantiate() as Node3D
+	if visual == null:
+		return
+
+	_weapon_mount.add_child(visual)
+	visual.transform = Transform3D.IDENTITY
+	_mounted_weapon_visual = visual
+
+
+func _clear_mounted_weapon_visual() -> void:
+	if _mounted_weapon_visual == null:
+		return
+
+	_mounted_weapon_visual.queue_free()
+	_mounted_weapon_visual = null

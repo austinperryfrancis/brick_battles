@@ -1,7 +1,8 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/rocket.gd" id="1_rocket_script"]
 [ext_resource type="PackedScene" path="res://scenes/ExplosionFlash.tscn" id="2_explosion"]
+[ext_resource type="PackedScene" path="res://assets/weapons/rocket_raw_small_flattened.dae" id="3_rocket_model"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rocket"]
 albedo_color = Color(0.9, 0.9, 0.86, 1)
@@ -32,11 +33,16 @@ monitorable = false
 script = ExtResource("1_rocket_script")
 explosion_scene = ExtResource("2_explosion")
 
+[node name="RocketRawSmall" parent="." instance=ExtResource("3_rocket_model")]
+transform = Transform3D(0.25, 0, 9.0499753e-07, 0, 0.25, 0, -9.0499753e-07, 0, 0.25, 0, 0, 0)
+
 [node name="RocketBody" type="MeshInstance3D" parent="."]
+visible = false
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0)
 mesh = SubResource("CapsuleMesh_rocket_body")
 
 [node name="Nose" type="MeshInstance3D" parent="."]
+visible = false
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.34)
 mesh = SubResource("SphereMesh_rocket_nose")
 
