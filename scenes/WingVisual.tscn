@@ -1,0 +1,27 @@
+[gd_scene load_steps=5 format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wing_panel"]
+albedo_color = Color(0.12, 0.22, 0.32, 1)
+roughness = 0.55
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wing_hinge"]
+albedo_color = Color(0.04, 0.05, 0.06, 1)
+roughness = 0.5
+
+[sub_resource type="BoxMesh" id="BoxMesh_wing_panel"]
+material = SubResource("StandardMaterial3D_wing_panel")
+size = Vector3(1.6, 0.12, 1.05)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wing_hinge"]
+material = SubResource("StandardMaterial3D_wing_hinge")
+size = Vector3(0.16, 0.18, 1.18)
+
+[node name="WingVisual" type="Node3D"]
+
+[node name="Hinge" type="MeshInstance3D" parent="."]
+position = Vector3(-0.08, 0, 0)
+mesh = SubResource("BoxMesh_wing_hinge")
+
+[node name="Panel" type="MeshInstance3D" parent="."]
+position = Vector3(-0.88, 0, 0)
+mesh = SubResource("BoxMesh_wing_panel")

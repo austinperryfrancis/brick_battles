@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/BrickCar.tscn" id="1_brick_car"]
 [ext_resource type="Script" path="res://scripts/follow_camera.gd" id="2_follow_camera"]
@@ -13,10 +13,10 @@ roughness = 1.0
 
 [sub_resource type="BoxMesh" id="BoxMesh_floor"]
 material = SubResource("StandardMaterial3D_floor")
-size = Vector3(100, 1, 100)
+size = Vector3(480, 1, 480)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
-size = Vector3(100, 1, 100)
+size = Vector3(480, 1, 480)
 
 [sub_resource type="BoxMesh" id="BoxMesh_ramp"]
 material = SubResource("StandardMaterial3D_floor")
@@ -25,12 +25,33 @@ size = Vector3(7, 0.5, 12)
 [sub_resource type="BoxShape3D" id="BoxShape3D_ramp"]
 size = Vector3(7, 0.5, 12)
 
+[sub_resource type="BoxMesh" id="BoxMesh_glide_ramp"]
+material = SubResource("StandardMaterial3D_floor")
+size = Vector3(14, 0.7, 32)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_glide_ramp"]
+size = Vector3(14, 0.7, 32)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wide_ramp"]
+material = SubResource("StandardMaterial3D_floor")
+size = Vector3(24, 0.7, 24)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wide_ramp"]
+size = Vector3(24, 0.7, 24)
+
 [sub_resource type="BoxMesh" id="BoxMesh_wall"]
 material = SubResource("StandardMaterial3D_floor")
-size = Vector3(100, 3, 1)
+size = Vector3(480, 3, 1)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_wall"]
-size = Vector3(100, 3, 1)
+size = Vector3(480, 3, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_column"]
+material = SubResource("StandardMaterial3D_floor")
+size = Vector3(3, 8, 3)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_column"]
+size = Vector3(3, 8, 3)
 
 [node name="TestArena" type="Node3D"]
 
@@ -53,10 +74,152 @@ mesh = SubResource("BoxMesh_ramp")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Ramp"]
 shape = SubResource("BoxShape3D_ramp")
 
+[node name="RampNorth" type="StaticBody3D" parent="."]
+position = Vector3(0, 1.06, 42)
+rotation = Vector3(-0.24, 0, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="RampNorth"]
+mesh = SubResource("BoxMesh_ramp")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RampNorth"]
+shape = SubResource("BoxShape3D_ramp")
+
+[node name="RampSouth" type="StaticBody3D" parent="."]
+position = Vector3(0, 1.06, -38)
+rotation = Vector3(0.24, 0, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="RampSouth"]
+mesh = SubResource("BoxMesh_ramp")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RampSouth"]
+shape = SubResource("BoxShape3D_ramp")
+
+[node name="RampEast" type="StaticBody3D" parent="."]
+position = Vector3(38, 1.06, 0)
+rotation = Vector3(-0.24, 1.5708, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="RampEast"]
+mesh = SubResource("BoxMesh_ramp")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RampEast"]
+shape = SubResource("BoxShape3D_ramp")
+
+[node name="RampWest" type="StaticBody3D" parent="."]
+position = Vector3(-38, 1.06, 0)
+rotation = Vector3(0.24, 1.5708, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="RampWest"]
+mesh = SubResource("BoxMesh_ramp")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RampWest"]
+shape = SubResource("BoxShape3D_ramp")
+
+[node name="GlideRamps" type="Node3D" parent="."]
+
+[node name="LongRampNorthwest" type="StaticBody3D" parent="GlideRamps"]
+position = Vector3(-120, 4.65, -120)
+rotation = Vector3(-0.32, -0.785398, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="GlideRamps/LongRampNorthwest"]
+mesh = SubResource("BoxMesh_glide_ramp")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GlideRamps/LongRampNorthwest"]
+shape = SubResource("BoxShape3D_glide_ramp")
+
+[node name="LongRampNortheast" type="StaticBody3D" parent="GlideRamps"]
+position = Vector3(130, 3.4, -105)
+rotation = Vector3(-0.24, 0.610865, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="GlideRamps/LongRampNortheast"]
+mesh = SubResource("BoxMesh_glide_ramp")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GlideRamps/LongRampNortheast"]
+shape = SubResource("BoxShape3D_glide_ramp")
+
+[node name="LongRampSouthwest" type="StaticBody3D" parent="GlideRamps"]
+position = Vector3(-140, 4.05, 105)
+rotation = Vector3(0.28, 0.959931, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="GlideRamps/LongRampSouthwest"]
+mesh = SubResource("BoxMesh_glide_ramp")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GlideRamps/LongRampSouthwest"]
+shape = SubResource("BoxShape3D_glide_ramp")
+
+[node name="LongRampSoutheast" type="StaticBody3D" parent="GlideRamps"]
+position = Vector3(125, 5.25, 125)
+rotation = Vector3(0.36, -0.523599, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="GlideRamps/LongRampSoutheast"]
+mesh = SubResource("BoxMesh_glide_ramp")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GlideRamps/LongRampSoutheast"]
+shape = SubResource("BoxShape3D_glide_ramp")
+
+[node name="CrossRampWest" type="StaticBody3D" parent="GlideRamps"]
+position = Vector3(-175, 4.35, 15)
+rotation = Vector3(-0.30, 1.5708, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="GlideRamps/CrossRampWest"]
+mesh = SubResource("BoxMesh_glide_ramp")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GlideRamps/CrossRampWest"]
+shape = SubResource("BoxShape3D_glide_ramp")
+
+[node name="CrossRampEast" type="StaticBody3D" parent="GlideRamps"]
+position = Vector3(180, 3.75, -20)
+rotation = Vector3(0.26, 1.5708, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="GlideRamps/CrossRampEast"]
+mesh = SubResource("BoxMesh_glide_ramp")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GlideRamps/CrossRampEast"]
+shape = SubResource("BoxShape3D_glide_ramp")
+
+[node name="SteepRampNorth" type="StaticBody3D" parent="GlideRamps"]
+position = Vector3(0, 4.5, -175)
+rotation = Vector3(-0.42, 0.174533, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="GlideRamps/SteepRampNorth"]
+mesh = SubResource("BoxMesh_wide_ramp")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GlideRamps/SteepRampNorth"]
+shape = SubResource("BoxShape3D_wide_ramp")
+
+[node name="SteepRampSouth" type="StaticBody3D" parent="GlideRamps"]
+position = Vector3(20, 4.5, 180)
+rotation = Vector3(0.42, -0.349066, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="GlideRamps/SteepRampSouth"]
+mesh = SubResource("BoxMesh_wide_ramp")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GlideRamps/SteepRampSouth"]
+shape = SubResource("BoxShape3D_wide_ramp")
+
+[node name="DiagonalRampCenterWest" type="StaticBody3D" parent="GlideRamps"]
+position = Vector3(-85, 4.95, 75)
+rotation = Vector3(-0.34, -2.35619, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="GlideRamps/DiagonalRampCenterWest"]
+mesh = SubResource("BoxMesh_glide_ramp")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GlideRamps/DiagonalRampCenterWest"]
+shape = SubResource("BoxShape3D_glide_ramp")
+
+[node name="DiagonalRampCenterEast" type="StaticBody3D" parent="GlideRamps"]
+position = Vector3(90, 4.95, -70)
+rotation = Vector3(-0.34, 2.35619, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="GlideRamps/DiagonalRampCenterEast"]
+mesh = SubResource("BoxMesh_glide_ramp")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GlideRamps/DiagonalRampCenterEast"]
+shape = SubResource("BoxShape3D_glide_ramp")
+
 [node name="Walls" type="Node3D" parent="."]
 
 [node name="NorthWall" type="StaticBody3D" parent="Walls"]
-position = Vector3(0, 1, 50)
+position = Vector3(0, 1, 240)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Walls/NorthWall"]
 mesh = SubResource("BoxMesh_wall")
@@ -65,7 +228,7 @@ mesh = SubResource("BoxMesh_wall")
 shape = SubResource("BoxShape3D_wall")
 
 [node name="SouthWall" type="StaticBody3D" parent="Walls"]
-position = Vector3(0, 1, -50)
+position = Vector3(0, 1, -240)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Walls/SouthWall"]
 mesh = SubResource("BoxMesh_wall")
@@ -74,7 +237,7 @@ mesh = SubResource("BoxMesh_wall")
 shape = SubResource("BoxShape3D_wall")
 
 [node name="EastWall" type="StaticBody3D" parent="Walls"]
-position = Vector3(50, 1, 0)
+position = Vector3(240, 1, 0)
 rotation = Vector3(0, 1.5708, 0)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Walls/EastWall"]
@@ -84,7 +247,7 @@ mesh = SubResource("BoxMesh_wall")
 shape = SubResource("BoxShape3D_wall")
 
 [node name="WestWall" type="StaticBody3D" parent="Walls"]
-position = Vector3(-50, 1, 0)
+position = Vector3(-240, 1, 0)
 rotation = Vector3(0, 1.5708, 0)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Walls/WestWall"]
@@ -92,6 +255,80 @@ mesh = SubResource("BoxMesh_wall")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Walls/WestWall"]
 shape = SubResource("BoxShape3D_wall")
+
+[node name="Columns" type="Node3D" parent="."]
+
+[node name="Column1" type="StaticBody3D" parent="Columns"]
+position = Vector3(-24, 4, -24)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Columns/Column1"]
+mesh = SubResource("BoxMesh_column")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Columns/Column1"]
+shape = SubResource("BoxShape3D_column")
+
+[node name="Column2" type="StaticBody3D" parent="Columns"]
+position = Vector3(24, 4, -24)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Columns/Column2"]
+mesh = SubResource("BoxMesh_column")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Columns/Column2"]
+shape = SubResource("BoxShape3D_column")
+
+[node name="Column3" type="StaticBody3D" parent="Columns"]
+position = Vector3(-24, 4, 24)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Columns/Column3"]
+mesh = SubResource("BoxMesh_column")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Columns/Column3"]
+shape = SubResource("BoxShape3D_column")
+
+[node name="Column4" type="StaticBody3D" parent="Columns"]
+position = Vector3(24, 4, 24)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Columns/Column4"]
+mesh = SubResource("BoxMesh_column")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Columns/Column4"]
+shape = SubResource("BoxShape3D_column")
+
+[node name="Column5" type="StaticBody3D" parent="Columns"]
+position = Vector3(0, 4, -52)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Columns/Column5"]
+mesh = SubResource("BoxMesh_column")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Columns/Column5"]
+shape = SubResource("BoxShape3D_column")
+
+[node name="Column6" type="StaticBody3D" parent="Columns"]
+position = Vector3(0, 4, 58)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Columns/Column6"]
+mesh = SubResource("BoxMesh_column")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Columns/Column6"]
+shape = SubResource("BoxShape3D_column")
+
+[node name="Column7" type="StaticBody3D" parent="Columns"]
+position = Vector3(-52, 4, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Columns/Column7"]
+mesh = SubResource("BoxMesh_column")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Columns/Column7"]
+shape = SubResource("BoxShape3D_column")
+
+[node name="Column8" type="StaticBody3D" parent="Columns"]
+position = Vector3(58, 4, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Columns/Column8"]
+mesh = SubResource("BoxMesh_column")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Columns/Column8"]
+shape = SubResource("BoxShape3D_column")
 
 [node name="Barrels" type="Node3D" parent="."]
 
@@ -110,11 +347,79 @@ position = Vector3(-4, 0.6, 20)
 [node name="Barrel5" parent="Barrels" instance=ExtResource("3_barrel")]
 position = Vector3(4, 0.6, 22)
 
+[node name="Barrel6" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(-6, 0.6, 36)
+
+[node name="Barrel7" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(6, 0.6, 36)
+
+[node name="Barrel8" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(0, 0.6, 49)
+
+[node name="Barrel9" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(-10, 0.6, 52)
+
+[node name="Barrel10" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(10, 0.6, 55)
+
+[node name="Barrel11" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(-8, 0.6, -30)
+
+[node name="Barrel12" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(8, 0.6, -32)
+
+[node name="Barrel13" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(0, 0.6, -45)
+
+[node name="Barrel14" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(-12, 0.6, -55)
+
+[node name="Barrel15" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(12, 0.6, -50)
+
+[node name="Barrel16" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(35, 0.6, 8)
+
+[node name="Barrel17" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(45, 0.6, -6)
+
+[node name="Barrel18" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(55, 0.6, 10)
+
+[node name="Barrel19" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(-35, 0.6, -8)
+
+[node name="Barrel20" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(-45, 0.6, 6)
+
+[node name="Barrel21" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(-55, 0.6, -12)
+
+[node name="Barrel22" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(-30, 0.6, -18)
+
+[node name="Barrel23" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(30, 0.6, -18)
+
+[node name="Barrel24" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(-30, 0.6, 18)
+
+[node name="Barrel25" parent="Barrels" instance=ExtResource("3_barrel")]
+position = Vector3(30, 0.6, 18)
+
 [node name="DummyTargets" type="Node3D" parent="."]
 
 [node name="DummyCar" parent="DummyTargets" instance=ExtResource("6_dummy_car")]
 position = Vector3(-10, 1.2, 28)
 rotation = Vector3(0, 0.55, 0)
+
+[node name="DummyCar2" parent="DummyTargets" instance=ExtResource("6_dummy_car")]
+position = Vector3(48, 1.2, 34)
+rotation = Vector3(0, -1.1, 0)
+
+[node name="DummyCar3" parent="DummyTargets" instance=ExtResource("6_dummy_car")]
+position = Vector3(-48, 1.2, -36)
+rotation = Vector3(0, 2.35, 0)
 
 [node name="Pickups" type="Node3D" parent="."]
 
@@ -126,6 +431,15 @@ position = Vector3(4, 1.2, 12)
 
 [node name="RocketPickup3" parent="Pickups" instance=ExtResource("4_item_pickup")]
 position = Vector3(0, 1.2, 24)
+
+[node name="RocketPickup4" parent="Pickups" instance=ExtResource("4_item_pickup")]
+position = Vector3(-44, 1.2, -22)
+
+[node name="RocketPickup5" parent="Pickups" instance=ExtResource("4_item_pickup")]
+position = Vector3(44, 1.2, 22)
+
+[node name="RocketPickup6" parent="Pickups" instance=ExtResource("4_item_pickup")]
+position = Vector3(0, 1.2, -62)
 
 [node name="GrenadeLauncherPickup1" parent="Pickups" instance=ExtResource("4_item_pickup")]
 position = Vector3(-8, 1.2, 14)
@@ -151,6 +465,30 @@ item_count = 3
 visual_color = Color(0.1, 0.95, 0.32, 1)
 emission_color = Color(0.0, 0.8, 0.18, 1)
 
+[node name="GrenadeLauncherPickup4" parent="Pickups" instance=ExtResource("4_item_pickup")]
+position = Vector3(-58, 1.2, 28)
+item_id = "grenade_launcher"
+display_name = "Grenade Launcher"
+item_count = 3
+visual_color = Color(0.1, 0.95, 0.32, 1)
+emission_color = Color(0.0, 0.8, 0.18, 1)
+
+[node name="GrenadeLauncherPickup5" parent="Pickups" instance=ExtResource("4_item_pickup")]
+position = Vector3(58, 1.2, -28)
+item_id = "grenade_launcher"
+display_name = "Grenade Launcher"
+item_count = 3
+visual_color = Color(0.1, 0.95, 0.32, 1)
+emission_color = Color(0.0, 0.8, 0.18, 1)
+
+[node name="GrenadeLauncherPickup6" parent="Pickups" instance=ExtResource("4_item_pickup")]
+position = Vector3(18, 1.2, -58)
+item_id = "grenade_launcher"
+display_name = "Grenade Launcher"
+item_count = 3
+visual_color = Color(0.1, 0.95, 0.32, 1)
+emission_color = Color(0.0, 0.8, 0.18, 1)
+
 [node name="MinigunPickup1" parent="Pickups" instance=ExtResource("4_item_pickup")]
 position = Vector3(-12, 1.2, 8)
 item_id = "minigun"
@@ -160,6 +498,20 @@ emission_color = Color(1, 0.28, 0.02, 1)
 
 [node name="MinigunPickup2" parent="Pickups" instance=ExtResource("4_item_pickup")]
 position = Vector3(12, 1.2, 28)
+item_id = "minigun"
+display_name = "Minigun"
+visual_color = Color(1, 0.55, 0.08, 1)
+emission_color = Color(1, 0.28, 0.02, 1)
+
+[node name="MinigunPickup3" parent="Pickups" instance=ExtResource("4_item_pickup")]
+position = Vector3(-30, 1.2, 52)
+item_id = "minigun"
+display_name = "Minigun"
+visual_color = Color(1, 0.55, 0.08, 1)
+emission_color = Color(1, 0.28, 0.02, 1)
+
+[node name="MinigunPickup4" parent="Pickups" instance=ExtResource("4_item_pickup")]
+position = Vector3(30, 1.2, -52)
 item_id = "minigun"
 display_name = "Minigun"
 visual_color = Color(1, 0.55, 0.08, 1)

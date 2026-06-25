@@ -1,38 +1,59 @@
-extends VehicleBody3D
+extends RigidBody3D
 
 signal inventory_changed(inventory: Dictionary)
 signal item_collected(item_id: String, display_name: String, count: int)
 signal item_used(item_id: String, display_name: String)
 
 # Quick tuning notes:
-# - Faster acceleration: raise engine_force_value, then raise max_speed if it hits the cap too soon.
-# - Tighter turning: raise steering_limit or steering_response; lower them if it twitches.
-# - Less flipping: lower wheel_roll_influence in BrickCar.tscn, or lower center_of_mass there.
-# - More grip: raise wheel_friction_slip on the VehicleWheel3D nodes in BrickCar.tscn.
-# - Stronger braking: raise brake_force.
-# - Faster coast-down after releasing gas: raise coast_deceleration or rolling_deceleration.
-# - Less jump launch: lower max_jump_up_speed or raise extra_air_gravity/ground_stick_force.
-# - Less body lean in turns: raise grounded_upright_strength or pitch_roll_damping.
+# - Faster acceleration: raise engine_acceleration, then raise max_speed if it hits the cap too soon.
+# - Tighter turning: raise max_turn_rate/high_speed_turn_rate; lower yaw_response if it snaps too hard.
+# - More sideways grip: raise lateral_grip; lower handbrake_lateral_grip for looser slides.
+# - Stronger suspension: raise suspension_strength; raise suspension_damping if it bounces.
+# - Less flipping: lower center_of_mass in BrickCar.tscn or raise grounded_upright_strength.
+# - Airborne wings: lower wing_max_fall_speed for more float, raise it for faster drops.
 
-@export var engine_force_value: float = 250.0
-@export var reverse_force: float = 65.0
-@export var brake_force: float = 8.5
-@export var steering_limit: float = 0.38
-@export var steering_response: float = 3.0
-@export var max_speed: float = 40.0
-@export var low_speed_boost: float = 4.0
-@export var rolling_deceleration: float = 1.0
-@export var coast_deceleration: float = 3.2
-@export var ground_stick_force: float = 8.0
+@export var max_speed: float = 48.0
+@export var max_reverse_speed: float = 16.0
+@export var engine_acceleration: float = 34.0
+@export var reverse_acceleration: float = 16.0
+@export var brake_deceleration: float = 38.0
+@export var handbrake_deceleration: float = 8.0
+@export var low_speed_boost: float = 1.35
+@export var rolling_deceleration: float = 0.5
+@export var coast_deceleration: float = 2.2
+@export var lateral_grip: float = 6.5
+@export var handbrake_lateral_grip: float = 2.0
+@export var max_turn_rate: float = 1.9
+@export var high_speed_turn_rate: float = 1.05
+@export var steering_response: float = 5.5
+@export var steering_return_response: float = 8.0
+@export var yaw_response: float = 7.0
+@export var minimum_turn_authority: float = 0.28
+@export var steering_sign: float = 1.0
+@export var no_steer_yaw_damping: float = 4.0
+@export var wheel_ray_length: float = 0.85
+@export var suspension_rest_length: float = 0.45
+@export var suspension_strength: float = 34.0
+@export var suspension_damping: float = 6.5
+@export var grounded_upright_strength: float = 18.0
+@export var pitch_roll_damping: float = 7.0
 @export var extra_air_gravity: float = 4.0
 @export var max_jump_up_speed: float = 7.0
 @export var air_angular_damping: float = 1.0
-@export var grounded_upright_strength: float = 3600.0
-@export var pitch_roll_damping: float = 650.0
 @export var bullet_scene: PackedScene
 @export var muzzle_path: NodePath = ^"Muzzle"
 @export var weapon_mount_path: NodePath = ^"WeaponMounts/PrimaryMount"
 @export var rocket_launch_path: NodePath = ^"WeaponMounts/PrimaryMount/RocketLaunchPoint"
+@export var wing_input_action: StringName = &"handbrake"
+@export var left_wing_mount_path: NodePath = ^"WingMounts/LeftWingMount"
+@export var right_wing_mount_path: NodePath = ^"WingMounts/RightWingMount"
+@export var wing_visual_scene: PackedScene
+@export var wing_deploy_speed: float = 8.0
+@export var wing_retract_speed: float = 12.0
+@export var wing_max_fall_speed: float = 6.0
+@export var wing_descent_brake: float = 35.0
+@export var wing_extra_gravity_scale: float = 0.2
+@export var wing_air_angular_damping: float = 2.4
 @export var bullet_speed: float = 300.0
 @export var bullet_impact_force: float = 35.0
 @export var burst_count: int = 3
@@ -60,11 +81,27 @@ signal item_used(item_id: String, display_name: String)
 @export var grenade_min_bounce_speed: float = 4.0
 
 var reset_position: Vector3
-var _wheels: Array[VehicleWheel3D] = []
+var _wheel_probes: Array[RayCast3D] = []
+var _front_wheel_probes: Array[RayCast3D] = []
+var _rear_wheel_probes: Array[RayCast3D] = []
+var _grounded_wheel_count := 0
+var _grounded_ratio := 0.0
+var _ground_normal := Vector3.UP
+var _grounded := false
+var _forward_speed := 0.0
+var _side_speed := 0.0
+var _horizontal_speed := 0.0
+var _steering_amount := 0.0
 var _muzzle: Marker3D
 var _weapon_mount: Marker3D
 var _rocket_launch_point: Marker3D
 var _mounted_weapon_visual: Node3D
+var _left_wing_mount: Marker3D
+var _right_wing_mount: Marker3D
+var _left_wing_visual: Node3D
+var _right_wing_visual: Node3D
+var _wing_deploy_amount := 0.0
+var _wings_active := false
 var _burst_shots_remaining := 0
 var _burst_timer := 0.0
 var _cooldown_timer := 0.0
@@ -77,27 +114,28 @@ var inventory: Dictionary = {}
 func _ready() -> void:
 	reset_position = global_position
 	can_sleep = false
-	_wheels.assign(find_children("*", "VehicleWheel3D", false, false))
+	_wheel_probes.assign(find_children("*", "RayCast3D", false, false))
+	_assign_wheel_probes()
+	_configure_wheel_probes()
 	_muzzle = get_node_or_null(muzzle_path) as Marker3D
 	_weapon_mount = get_node_or_null(weapon_mount_path) as Marker3D
 	_rocket_launch_point = get_node_or_null(rocket_launch_path) as Marker3D
-	print("BrickCar VehicleBody scene loaded successfully.")
+	_left_wing_mount = get_node_or_null(left_wing_mount_path) as Marker3D
+	_right_wing_mount = get_node_or_null(right_wing_mount_path) as Marker3D
+	print("BrickCar RigidBody raycast scene loaded successfully.")
 
 
 func _physics_process(delta: float) -> void:
-	var grounded := _get_grounded_wheel_count() > 0
-	var speed := linear_velocity.length()
-	var forward_speed := linear_velocity.dot(global_transform.basis.z)
-
-	_update_drive(speed, forward_speed, grounded)
-	_update_steering(delta, speed, grounded)
+	_update_ground_probe_state()
+	_update_drive_state()
+	_apply_suspension_forces()
+	_apply_drive_forces()
+	_update_arcade_steering(delta)
+	_apply_grounded_stability(_grounded)
+	_apply_ground_drag(_grounded)
 	_update_weapon(delta)
 	_update_inventory_item()
-	_apply_grounded_stability(grounded)
-	_apply_ground_drag(grounded)
-
-	if grounded and speed > 0.5:
-		apply_central_force(Vector3.DOWN * ground_stick_force * speed)
+	_update_wings(delta, _grounded)
 
 
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
@@ -105,62 +143,134 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		reset_car(state)
 		return
 
-	if _get_grounded_wheel_count() > 0:
+	if _grounded:
 		return
 
+	var wings_active := _is_wing_input_active()
 	var velocity := state.linear_velocity
 	if velocity.y > max_jump_up_speed:
 		velocity.y = max_jump_up_speed
 
-	velocity += Vector3.DOWN * extra_air_gravity * state.step
+	var extra_gravity_scale := wing_extra_gravity_scale if wings_active else 1.0
+	velocity += Vector3.DOWN * extra_air_gravity * extra_gravity_scale * state.step
+	if wings_active and velocity.y < -wing_max_fall_speed:
+		velocity.y = move_toward(velocity.y, -wing_max_fall_speed, wing_descent_brake * state.step)
+
 	state.linear_velocity = velocity
-	state.angular_velocity = state.angular_velocity.lerp(Vector3.ZERO, air_angular_damping * state.step)
+	var angular_damping := wing_air_angular_damping if wings_active else air_angular_damping
+	state.angular_velocity = state.angular_velocity.lerp(
+		Vector3.ZERO,
+		clampf(angular_damping * state.step, 0.0, 1.0)
+	)
 
 
-func _update_drive(speed: float, forward_speed: float, grounded: bool) -> void:
-	if not grounded:
-		engine_force = 0.0
-		brake = 0.0
+func _update_drive_state() -> void:
+	var horizontal_velocity := Vector3(linear_velocity.x, 0.0, linear_velocity.z)
+	var forward := global_transform.basis.z.normalized()
+	var right := global_transform.basis.x.normalized()
+
+	_horizontal_speed = horizontal_velocity.length()
+	_forward_speed = horizontal_velocity.dot(forward)
+	_side_speed = horizontal_velocity.dot(right)
+
+
+func _update_ground_probe_state() -> void:
+	_grounded_wheel_count = 0
+	_ground_normal = Vector3.ZERO
+
+	for probe in _wheel_probes:
+		probe.force_raycast_update()
+		if probe.is_colliding():
+			_grounded_wheel_count += 1
+			_ground_normal += probe.get_collision_normal()
+
+	_grounded = _grounded_wheel_count > 0
+	_grounded_ratio = clampf(float(_grounded_wheel_count) / maxf(float(_wheel_probes.size()), 1.0), 0.0, 1.0)
+
+	if _grounded and _ground_normal.length_squared() > 0.0001:
+		_ground_normal = _ground_normal.normalized()
+	else:
+		_ground_normal = Vector3.UP
+
+
+func _apply_suspension_forces() -> void:
+	if _wheel_probes.is_empty():
+		return
+
+	var rest_length := maxf(suspension_rest_length, 0.01)
+
+	for probe in _wheel_probes:
+		if not probe.is_colliding():
+			continue
+
+		var hit_normal := probe.get_collision_normal().normalized()
+		var hit_distance := probe.global_position.distance_to(probe.get_collision_point())
+		var compression := clampf((wheel_ray_length - hit_distance) / rest_length, 0.0, 1.0)
+		var force_offset := probe.global_position - global_position
+		var point_velocity := linear_velocity + angular_velocity.cross(force_offset)
+		var spring_velocity := point_velocity.dot(hit_normal)
+		var force_amount := (compression * suspension_strength - spring_velocity * suspension_damping) * mass
+
+		if force_amount > 0.0:
+			apply_force(hit_normal * force_amount, force_offset)
+
+
+func _apply_drive_forces() -> void:
+	if not _grounded:
 		return
 
 	var throttle := Input.get_action_strength("accelerate")
 	var brake_input := Input.get_action_strength("brake")
 	var handbrake_on := Input.is_action_pressed("handbrake")
+	var horizontal_velocity := Vector3(linear_velocity.x, 0.0, linear_velocity.z)
+	var forward := global_transform.basis.z.normalized()
+	var right := global_transform.basis.x.normalized()
+	var speed_ratio := clampf(maxf(_forward_speed, 0.0) / maxf(max_speed, 0.01), 0.0, 1.0)
 
-	engine_force = 0.0
-	brake = 0.0
-
-	if throttle > 0.0 and speed < max_speed:
-		engine_force = _scaled_engine_force(engine_force_value, speed) * throttle
+	if throttle > 0.0 and _forward_speed < max_speed:
+		var throttle_curve := lerpf(low_speed_boost, 0.25, speed_ratio)
+		apply_central_force(forward * engine_acceleration * throttle_curve * throttle * mass)
 
 	if brake_input > 0.0:
-		if forward_speed > 1.0:
-			brake = brake_force * brake_input
-		elif speed < max_speed * 0.45:
-			engine_force = -_scaled_engine_force(reverse_force, speed) * brake_input
+		if _forward_speed > 1.0:
+			apply_central_force(-forward * brake_deceleration * brake_input * mass)
+		elif _forward_speed > -max_reverse_speed:
+			apply_central_force(-forward * reverse_acceleration * brake_input * mass)
 
-	if handbrake_on:
-		brake = maxf(brake, brake_force * 1.4)
+	if handbrake_on and horizontal_velocity.length_squared() > 0.01:
+		apply_central_force(-horizontal_velocity.normalized() * handbrake_deceleration * mass)
 
-
-func _update_steering(delta: float, speed: float, grounded: bool) -> void:
-	var steer_input := Input.get_action_strength("steer_left") - Input.get_action_strength("steer_right")
-	var target_steering := 0.0
-
-	if grounded:
-		var speed_factor := clampf(speed / max_speed, 0.0, 1.0)
-		var high_speed_limit := lerpf(steering_limit, steering_limit * 0.35, speed_factor)
-		target_steering = steer_input * high_speed_limit
-
-	steering = move_toward(steering, target_steering, steering_response * delta)
+	var grip := handbrake_lateral_grip if handbrake_on else lateral_grip
+	apply_central_force(-right * _side_speed * grip * mass * _grounded_ratio)
 
 
-func _scaled_engine_force(base_force: float, speed: float) -> float:
-	if speed < 0.1:
-		return base_force * low_speed_boost
-	if speed < 5.0:
-		return clampf(base_force * 5.0 / speed, base_force, base_force * low_speed_boost)
-	return base_force
+func _update_arcade_steering(delta: float) -> void:
+	var steer_input := _get_steer_input()
+	var response := steering_response if absf(steer_input) > absf(_steering_amount) else steering_return_response
+	_steering_amount = move_toward(_steering_amount, steer_input, response * delta)
+
+	if not _grounded:
+		return
+
+	var yaw_axis := _ground_normal
+	var current_yaw := angular_velocity.dot(yaw_axis)
+
+	if absf(_steering_amount) < 0.04:
+		var damping := clampf(no_steer_yaw_damping * delta, 0.0, 1.0)
+		angular_velocity -= yaw_axis * current_yaw * damping
+		return
+
+	var speed_factor := clampf(absf(_forward_speed) / maxf(max_speed, 0.01), 0.0, 1.0)
+	var speed_authority := clampf(absf(_forward_speed) / 6.0, 0.0, 1.0)
+	var turn_authority := lerpf(minimum_turn_authority, 1.0, speed_authority)
+	var reverse_sign := -1.0 if _forward_speed < -0.5 else 1.0
+	var target_turn_rate := _steering_amount * lerpf(max_turn_rate, high_speed_turn_rate, speed_factor) * turn_authority * reverse_sign
+	var new_yaw := move_toward(current_yaw, target_turn_rate, yaw_response * delta)
+	angular_velocity += yaw_axis * (new_yaw - current_yaw)
+
+
+func _get_steer_input() -> float:
+	return (Input.get_action_strength("steer_left") - Input.get_action_strength("steer_right")) * steering_sign
 
 
 func _update_weapon(delta: float) -> void:
@@ -215,6 +325,89 @@ func _start_bullet_burst(count: int, interval: float, speed: float, impact_force
 func _update_inventory_item() -> void:
 	if Input.is_action_just_pressed("use_item"):
 		use_inventory_item()
+
+
+func _update_wings(delta: float, grounded: bool) -> void:
+	_wings_active = not grounded and _is_wing_input_active()
+	var target_amount := 1.0 if _wings_active else 0.0
+	var deploy_speed := wing_deploy_speed if target_amount > _wing_deploy_amount else wing_retract_speed
+	_wing_deploy_amount = move_toward(_wing_deploy_amount, target_amount, deploy_speed * delta)
+
+	if _wing_deploy_amount > 0.0 and _left_wing_visual == null and _right_wing_visual == null:
+		_mount_wing_visuals()
+
+	_apply_wing_visual_state()
+
+	if _wing_deploy_amount <= 0.0 and not _wings_active:
+		_clear_wing_visuals()
+
+
+func _is_wing_input_active() -> bool:
+	return Input.is_action_pressed(wing_input_action)
+
+
+func _mount_wing_visuals() -> void:
+	_clear_wing_visuals()
+
+	if wing_visual_scene == null:
+		return
+
+	if _left_wing_mount != null:
+		_left_wing_visual = _instantiate_wing_visual(_left_wing_mount)
+
+	if _right_wing_mount != null:
+		_right_wing_visual = _instantiate_wing_visual(_right_wing_mount)
+
+
+func _instantiate_wing_visual(mount: Marker3D) -> Node3D:
+	var visual := wing_visual_scene.instantiate() as Node3D
+	if visual == null:
+		return null
+
+	mount.add_child(visual)
+	visual.transform = Transform3D.IDENTITY
+	return visual
+
+
+func _apply_wing_visual_state() -> void:
+	_apply_wing_visual(_left_wing_visual, _wing_deploy_amount, false)
+	_apply_wing_visual(_right_wing_visual, _wing_deploy_amount, true)
+
+
+func _apply_wing_visual(visual: Node3D, deploy_amount: float, mirror: bool) -> void:
+	if visual == null:
+		return
+
+	var side_sign := -1.0 if mirror else 1.0
+	visual.visible = deploy_amount > 0.01
+	if visual.has_method("set_deploy_amount"):
+		visual.call("set_deploy_amount", deploy_amount, side_sign)
+		return
+
+	visual.scale = Vector3.ONE
+
+	var hinge := visual.get_node_or_null("Hinge") as Node3D
+	if hinge != null:
+		hinge.position.x = side_sign * 0.08
+
+	var panel := visual.get_node_or_null("Panel") as Node3D
+	if panel != null:
+		panel.position.x = side_sign * lerpf(0.22, 1.05, deploy_amount)
+		panel.scale = Vector3(lerpf(0.12, 1.0, deploy_amount), 1.0, 1.0)
+		return
+
+	var extend_scale := lerpf(0.05, 1.0, deploy_amount)
+	visual.scale = Vector3(side_sign * extend_scale, 1.0, 1.0)
+
+
+func _clear_wing_visuals() -> void:
+	if _left_wing_visual != null:
+		_left_wing_visual.queue_free()
+		_left_wing_visual = null
+
+	if _right_wing_visual != null:
+		_right_wing_visual.queue_free()
+		_right_wing_visual = null
 
 
 func use_inventory_item() -> bool:
@@ -312,16 +505,16 @@ func _apply_grounded_stability(grounded: bool) -> void:
 	if not grounded:
 		return
 
-	var grounded_ratio := clampf(float(_get_grounded_wheel_count()) / 4.0, 0.25, 1.0)
+	var grounded_ratio := maxf(_grounded_ratio, 0.25)
 	var up := global_transform.basis.y.normalized()
-	var tilt_axis := up.cross(Vector3.UP)
+	var tilt_axis := up.cross(_ground_normal)
 
-	if tilt_axis.length_squared() > 0.0001:
-		apply_torque(tilt_axis * grounded_upright_strength * grounded_ratio)
+	if grounded_upright_strength > 0.0 and tilt_axis.length_squared() > 0.0001:
+		apply_torque(tilt_axis * grounded_upright_strength * mass * grounded_ratio)
 
-	var yaw_velocity := Vector3.UP * angular_velocity.dot(Vector3.UP)
+	var yaw_velocity := _ground_normal * angular_velocity.dot(_ground_normal)
 	var pitch_roll_velocity := angular_velocity - yaw_velocity
-	apply_torque(-pitch_roll_velocity * pitch_roll_damping * grounded_ratio)
+	apply_torque(-pitch_roll_velocity * pitch_roll_damping * mass * grounded_ratio)
 
 
 func _apply_ground_drag(grounded: bool) -> void:
@@ -343,20 +536,38 @@ func _apply_ground_drag(grounded: bool) -> void:
 
 
 func _get_grounded_wheel_count() -> int:
-	var count := 0
-	for wheel in _wheels:
-		if wheel.is_in_contact():
-			count += 1
-	return count
+	return _grounded_wheel_count
+
+
+func _configure_wheel_probes() -> void:
+	for probe in _wheel_probes:
+		probe.enabled = true
+		probe.target_position = Vector3.DOWN * wheel_ray_length
+		probe.exclude_parent = true
+
+func _assign_wheel_probes() -> void:
+	_front_wheel_probes.clear()
+	_rear_wheel_probes.clear()
+
+	for probe in _wheel_probes:
+		if probe.name.begins_with("Front"):
+			_front_wheel_probes.append(probe)
+		else:
+			_rear_wheel_probes.append(probe)
 
 
 func reset_car(state: PhysicsDirectBodyState3D) -> void:
 	state.transform = Transform3D(Basis(), reset_position + Vector3.UP * 1.5)
 	state.linear_velocity = Vector3.ZERO
 	state.angular_velocity = Vector3.ZERO
-	engine_force = 0.0
-	brake = 0.0
-	steering = 0.0
+	_steering_amount = 0.0
+	_grounded_wheel_count = 0
+	_grounded_ratio = 0.0
+	_grounded = false
+	_ground_normal = Vector3.UP
+	_wings_active = false
+	_wing_deploy_amount = 0.0
+	_clear_wing_visuals()
 
 
 func add_inventory_item(item_id: String, display_name: String = "", item_count: int = 1) -> bool:

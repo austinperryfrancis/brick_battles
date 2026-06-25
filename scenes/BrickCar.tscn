@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://pfuk1otg2mdi"]
+[gd_scene load_steps=11 format=3 uid="uid://pfuk1otg2mdi"]
 
 [ext_resource type="Script" uid="uid://20q6wftfnwcr" path="res://scripts/arcade_car.gd" id="1_car_script"]
 [ext_resource type="PackedScene" uid="uid://bxwkuhabrwx4u" path="res://assets/vehicles/brick_car/classic_police_car_flattened.dae" id="2_car_model"]
@@ -7,25 +7,27 @@
 [ext_resource type="PackedScene" path="res://scenes/Grenade.tscn" id="5_grenade"]
 [ext_resource type="PackedScene" path="res://scenes/RocketMountVisual.tscn" id="6_rocket_mount_visual"]
 [ext_resource type="PackedScene" path="res://scenes/GrenadeLauncherVisual.tscn" id="7_grenade_launcher_visual"]
+[ext_resource type="PackedScene" path="res://scenes/WingVisual.tscn" id="8_wing_visual"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_car"]
-friction = 0.05
+friction = 0.5
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_chassis"]
 size = Vector3(1.7, 0.8, 3.8)
 
-[node name="BrickCar" type="VehicleBody3D"]
+[node name="BrickCar" type="RigidBody3D"]
 mass = 80.0
 physics_material_override = SubResource("PhysicsMaterial_car")
 center_of_mass_mode = 1
 center_of_mass = Vector3(0, -1.15, 0)
 continuous_cd = true
-angular_damp = 0.9
+angular_damp = 1.1
 script = ExtResource("1_car_script")
 bullet_scene = ExtResource("3_bullet")
 rocket_scene = ExtResource("4_rocket")
 rocket_mount_visual_scene = ExtResource("6_rocket_mount_visual")
 grenade_launcher_visual_scene = ExtResource("7_grenade_launcher_visual")
+wing_visual_scene = ExtResource("8_wing_visual")
 grenade_scene = ExtResource("5_grenade")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
@@ -44,59 +46,37 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.024316907, 0.1)
 [node name="RocketLaunchPoint" type="Marker3D" parent="WeaponMounts/PrimaryMount"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06, 0.45)
 
-[node name="FrontLeftWheel" type="VehicleWheel3D" parent="."]
-transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, -0.5, -0.2, 1.1)
-use_as_traction = true
-use_as_steering = true
-wheel_roll_influence = 0.0
-wheel_radius = 0.36
-wheel_rest_length = 0.16
-wheel_friction_slip = 0.95
-suspension_travel = 0.18
-suspension_stiffness = 85.0
-suspension_max_force = 12000.0
-damping_compression = 2.8
-damping_relaxation = 3.2
+[node name="WingMounts" type="Node3D" parent="."]
 
-[node name="FrontRightWheel" type="VehicleWheel3D" parent="."]
-transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0.5, -0.2, 1.1)
-use_as_traction = true
-use_as_steering = true
-wheel_roll_influence = 0.0
-wheel_radius = 0.36
-wheel_rest_length = 0.16
-wheel_friction_slip = 0.95
-suspension_travel = 0.18
-suspension_stiffness = 85.0
-suspension_max_force = 12000.0
-damping_compression = 2.8
-damping_relaxation = 3.2
+[node name="LeftWingMount" type="Marker3D" parent="WingMounts"]
+position = Vector3(0.95, 0.18, 0.0)
 
-[node name="RearLeftWheel" type="VehicleWheel3D" parent="."]
-transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, -0.5, -0.2, -0.9)
-use_as_traction = true
-wheel_roll_influence = 0.0
-wheel_radius = 0.36
-wheel_rest_length = 0.16
-wheel_friction_slip = 0.95
-suspension_travel = 0.18
-suspension_stiffness = 85.0
-suspension_max_force = 12000.0
-damping_compression = 2.8
-damping_relaxation = 3.2
+[node name="RightWingMount" type="Marker3D" parent="WingMounts"]
+position = Vector3(-0.95, 0.18, 0.0)
 
-[node name="RearRightWheel" type="VehicleWheel3D" parent="."]
-transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0.5, -0.2, -0.9)
-use_as_traction = true
-wheel_roll_influence = 0.0
-wheel_radius = 0.36
-wheel_rest_length = 0.16
-wheel_friction_slip = 0.95
-suspension_travel = 0.18
-suspension_stiffness = 85.0
-suspension_max_force = 12000.0
-damping_compression = 2.8
-damping_relaxation = 3.2
+[node name="FrontLeftWheel" type="RayCast3D" parent="."]
+position = Vector3(0.5, -0.2, 1.1)
+enabled = true
+target_position = Vector3(0, -0.85, 0)
+exclude_parent = true
+
+[node name="FrontRightWheel" type="RayCast3D" parent="."]
+position = Vector3(-0.5, -0.2, 1.1)
+enabled = true
+target_position = Vector3(0, -0.85, 0)
+exclude_parent = true
+
+[node name="RearLeftWheel" type="RayCast3D" parent="."]
+position = Vector3(0.5, -0.2, -0.9)
+enabled = true
+target_position = Vector3(0, -0.85, 0)
+exclude_parent = true
+
+[node name="RearRightWheel" type="RayCast3D" parent="."]
+position = Vector3(-0.5, -0.2, -0.9)
+enabled = true
+target_position = Vector3(0, -0.85, 0)
+exclude_parent = true
 
 [node name="Visual" type="Node3D" parent="."]
 transform = Transform3D(9.0499753e-07, 0, -0.25, 0, 0.25, 0, 0.25, 0, 9.0499753e-07, 0.298, -0.42, 0.237)
